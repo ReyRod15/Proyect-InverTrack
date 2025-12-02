@@ -388,5 +388,99 @@ namespace InverTrack
 
             MessageBox.Show($"Compra realizada: {cantidad} x {_accionSeleccionada} @ ${precio:F2}");
         }
+
+        // [3] Ejecuta una venta al precio actual y actualiza usuario, cartera y gráfica.
+        private void BtnVender_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                MessageBox.Show("Selecciona una acción");
+                return;
+            }
+
+            if (!decimal.TryParse(CantidadVenta.Text, out decimal cantidad) || cantidad <= 0)
+            {
+                MessageBox.Show("Cantidad inválida");
+                return;
+            }
+
+            if (_usuarioActual == null)
+            {
+                MessageBox.Show("Usuario no cargado");
+                return;
+            }
+
+            if (!_usuarioActual.Acciones.ContainsKey(_accionSeleccionada) || _usuarioActual.Acciones[_accionSeleccionada] < cantidad)
+            {
+                MessageBox.Show("No tienes suficientes acciones");
+                return;
+            }
+
+            // Precio canónico: usar el último precio registrado para el símbolo (el mismo que Mi Cartera y la gráfica)
+            decimal precio;
+            if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                precioDict > 0)
+            {
+                precio = precioDict;
+            }
+            else if (!decimal.TryParse(PrecioVenta.Text.Replace("$", string.Empty), NumberStyles.Any, CultureInfo.InvariantCulture, out precio))
+            {
+                // Fallback: usar la última muestra de la serie si por algún motivo no se puede parsear el texto
+                List<PrecioHistorico> fuenteFallback = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+                if (fuenteFallback.Count == 0)
+                {
+                    MessageBox.Show("No se pudo obtener el precio actual.");
+                    return;
+                }
+                precio = fuenteFallback.Last().Precio;
+            }
+            var total = cantidad * precio;
+            var ahora = DateTime.Now;
+
+            // Añadir punto de precio exacto en el modo intradía para que la marca coincida con la línea
+            _preciosIntradia.Add(new PrecioHistorico
+            {
+                Fecha = ahora,
+                Precio = precio,
+                PrecioApertura = precio,
+                PrecioMaximo = precio,
+                PrecioMinimo = precio,
+                Simbolo = _accionSeleccionada
+            });
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
+            }
+
+            _usuarioActual.Dinero += total;
+            _usuarioActual.Acciones[_accionSeleccionada] -= (int)cantidad;
+
+            if (_usuarioActual.Acciones[_accionSeleccionada] == 0)
+                _usuarioActual.Acciones.Remove(_accionSeleccionada);
+
+            var transaccion = new Transaccion
+            {
+                Usuario = _usuarioActual.NombreUsuario,
+                Simbolo = _accionSeleccionada,
+                Tipo = "Venta",
+                Cantidad = (int)cantidad,
+                Precio = precio,
+                Total = total,
+                Fecha = ahora
+            };
+
+            _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            _servicioAlmacenamiento.GuardarTransaccion(transaccion);
+
+            ActualizarInfoUsuario();
+            // No recargar histórico desde Yahoo al vender; solo actualizar con los datos que ya tenemos
+            ActualizarGrafica();
+            ActualizarPrecios();
+            CantidadVenta.Clear();
+
+            MessageBox.Show($"Venta realizada: {cantidad} x {_accionSeleccionada} @ ${precio:F2}");
+        }
     }
 }
