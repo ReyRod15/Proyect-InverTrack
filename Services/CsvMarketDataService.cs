@@ -64,15 +64,6 @@ namespace InverTrack.Services
             return historicoCompleto.LastOrDefault()?.Precio ?? 0m;
         }
 
-        // [2] Aplica el filtro de fechas al histórico y lo ordena cronológicamente.
-        private List<PrecioHistorico> FiltrarPorRango(List<PrecioHistorico> lista, DateTime desde, DateTime hasta)
-        {
-            return lista
-                .Where(p => p.Fecha >= desde && p.Fecha <= hasta)
-                .OrderBy(p => p.Fecha)
-                .ToList();
-        }
-
         /// <summary>
         /// [2] Genera un histórico diario simulado tipo "Yahoo" (random walk suave), y luego lo escala
         /// para que el último cierre coincida exactamente con el precio actual proporcionado.
