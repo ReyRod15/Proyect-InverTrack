@@ -235,6 +235,10 @@ namespace InverTrack
             ActualizarPrecios();
         }
 
+
+        // Codigo de diego 
+
+
         // [3] Actualiza los labels de precio actual y engancha los eventos para recalcular totales.
         private void ActualizarPrecios()
         {
@@ -262,6 +266,32 @@ namespace InverTrack
         private void Cantidad_TextChanged(object sender, TextChangedEventArgs e)
         {
             ActualizarTotal();
+        }
+
+        // [3] Calcula el total de la operación de compra y venta usando el precio canónico.
+        private void ActualizarTotal()
+        {
+            // Precio canónico: el mismo que se usa en la gráfica, en Mi Cartera y en las operaciones.
+            decimal precio;
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                precioDict > 0)
+            {
+                precio = precioDict;
+            }
+            else
+            {
+                List<PrecioHistorico> fuente = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+                if (fuente.Count == 0) return;
+                precio = fuente.Last().Precio;
+            }
+
+            if (decimal.TryParse(CantidadCompra.Text, out decimal cantCompra))
+                TotalCompra.Text = $"Total: ${(cantCompra * precio):F2}";
+
+            if (decimal.TryParse(CantidadVenta.Text, out decimal cantVenta))
+                TotalVenta.Text = $"Total: ${(cantVenta * precio):F2}";
         }
     }
 }
