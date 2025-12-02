@@ -482,5 +482,104 @@ namespace InverTrack
 
             MessageBox.Show($"Venta realizada: {cantidad} x {_accionSeleccionada} @ ${precio:F2}");
         }
+
+        // [3] Recalcula dinero disponible, valor de cartera y la lista "Mi Cartera".
+        private void ActualizarInfoUsuario()
+        {
+            if (_usuarioActual == null)
+                return;
+
+            LblDinero.Text = $"${_usuarioActual.Dinero:F2}";
+
+            Task.Run(async () =>
+            {
+                var transacciones = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuarioActual.NombreUsuario);
+                var items = new List<CarteraItem>();
+                decimal valorCartera = 0;
+
+                foreach (var kvp in _usuarioActual.Acciones)
+                {
+                    var simbolo = kvp.Key;
+                    var cantidad = kvp.Value;
+
+                    // Usar SIEMPRE el precio canónico almacenado en _ultimoPrecioPorSimbolo.
+                    // Si no existe para ese símbolo aún, obtenerlo UNA vez del servicio y guardarlo.
+                    decimal precioActual;
+                    if (!_ultimoPrecioPorSimbolo.TryGetValue(simbolo, out precioActual) || precioActual <= 0)
+                    {
+                        precioActual = await _servicioMercado.ObtenerPrecioActual(simbolo);
+                        _ultimoPrecioPorSimbolo[simbolo] = precioActual;
+                    }
+
+                    var valorActual = precioActual * cantidad;
+                    valorCartera += valorActual;
+
+                    var transaccionesSimbolo = transacciones
+                        .Where(t => t.Simbolo == simbolo)
+                        .OrderBy(t => t.Fecha)
+                        .ToList();
+
+                    // Calcular costo promedio de la posición ABIERTA usando FIFO (solo compras no vendidas)
+                    var lotes = new List<(int Cantidad, decimal Precio)>();
+
+                    foreach (var t in transaccionesSimbolo)
+                    {
+                        if (t.Tipo == "Compra")
+                        {
+                            lotes.Add((t.Cantidad, t.Precio));
+                        }
+                        else if (t.Tipo == "Venta")
+                        {
+                            int porVender = t.Cantidad;
+                            while (porVender > 0 && lotes.Count > 0)
+                            {
+                                var lote = lotes[0];
+                                if (porVender >= lote.Cantidad)
+                                {
+                                    porVender -= lote.Cantidad;
+                                    lotes.RemoveAt(0);
+                                }
+                                else
+                                {
+                                    lote.Cantidad -= porVender;
+                                    lotes[0] = lote;
+                                    porVender = 0;
+                                }
+                            }
+                        }
+                    }
+
+                    int cantidadAbierta = lotes.Sum(l => l.Cantidad);
+                    decimal costoAbierto = lotes.Sum(l => l.Cantidad * l.Precio);
+                    decimal promedioCompra = cantidadAbierta > 0 ? costoAbierto / cantidadAbierta : 0m;
+
+                    // Fallback por si algo no cuadra con la cantidad almacenada en el usuario
+                    if (cantidadAbierta == 0 && cantidad > 0)
+                    {
+                        var compras = transaccionesSimbolo.Where(t => t.Tipo == "Compra").ToList();
+                        var accionesCompradas = compras.Sum(t => t.Cantidad);
+                        var costoTotalCompras = compras.Sum(t => t.Total);
+                        promedioCompra = accionesCompradas > 0 ? costoTotalCompras / accionesCompradas : 0m;
+                    }
+
+                    var valorBase = promedioCompra * cantidad;
+                    var ganancia = valorActual - valorBase;
+
+                    items.Add(new CarteraItem
+                    {
+                        Simbolo = simbolo,
+                        Cantidad = cantidad,
+                        ValorActual = valorActual,
+                        Ganancia = ganancia
+                    });
+                }
+
+                Dispatcher.Invoke(() =>
+                {
+                    LblCartera.Text = $"${valorCartera:F2}";
+                    CarteraList.ItemsSource = items;
+                });
+            });
+        }
     }
 }
