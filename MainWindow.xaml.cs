@@ -293,5 +293,100 @@ namespace InverTrack
             if (decimal.TryParse(CantidadVenta.Text, out decimal cantVenta))
                 TotalVenta.Text = $"Total: ${(cantVenta * precio):F2}";
         }
+
+        // ===== [3] Sección: operaciones de compra/venta y cartera =====
+
+        // [3] Ejecuta una compra al precio actual y actualiza usuario, cartera y gráfica.
+        private void BtnComprar_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                MessageBox.Show("Selecciona una acción");
+                return;
+            }
+
+            if (!decimal.TryParse(CantidadCompra.Text, out decimal cantidad) || cantidad <= 0)
+            {
+                MessageBox.Show("Cantidad inválida");
+                return;
+            }
+
+            if (_usuarioActual == null)
+            {
+                MessageBox.Show("Usuario no cargado");
+                return;
+            }
+
+            // Precio canónico: usar el último precio registrado para el símbolo (el mismo que Mi Cartera y la gráfica)
+            decimal precio;
+            if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                precioDict > 0)
+            {
+                precio = precioDict;
+            }
+            else if (!decimal.TryParse(PrecioCompra.Text.Replace("$", string.Empty), NumberStyles.Any, CultureInfo.InvariantCulture, out precio))
+            {
+                // Fallback: usar la última muestra de la serie si por algún motivo no se puede parsear el texto
+                List<PrecioHistorico> fuenteFallback = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+                if (fuenteFallback.Count == 0)
+                {
+                    MessageBox.Show("No se pudo obtener el precio actual.");
+                    return;
+                }
+                precio = fuenteFallback.Last().Precio;
+            }
+            var total = cantidad * precio;
+            var ahora = DateTime.Now;
+
+            // Añadir punto de precio exacto en el modo intradía para que la marca coincida con la línea
+            _preciosIntradia.Add(new PrecioHistorico
+            {
+                Fecha = ahora,
+                Precio = precio,
+                PrecioApertura = precio,
+                PrecioMaximo = precio,
+                PrecioMinimo = precio,
+                Simbolo = _accionSeleccionada
+            });
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
+            }
+
+            if (_usuarioActual.Dinero < total)
+            {
+                MessageBox.Show("Dinero insuficiente");
+                return;
+            }
+
+            _usuarioActual.Dinero -= total;
+            if (!_usuarioActual.Acciones.ContainsKey(_accionSeleccionada))
+                _usuarioActual.Acciones[_accionSeleccionada] = 0;
+            _usuarioActual.Acciones[_accionSeleccionada] += (int)cantidad;
+
+            var transaccion = new Transaccion
+            {
+                Usuario = _usuarioActual.NombreUsuario,
+                Simbolo = _accionSeleccionada,
+                Tipo = "Compra",
+                Cantidad = (int)cantidad,
+                Precio = precio,
+                Total = total,
+                Fecha = ahora
+            };
+
+            _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            _servicioAlmacenamiento.GuardarTransaccion(transaccion);
+
+            ActualizarInfoUsuario();
+            // No recargar histórico desde Yahoo al comprar; solo actualizar con los datos que ya tenemos
+            ActualizarGrafica();
+            ActualizarPrecios();
+            CantidadCompra.Clear();
+
+            MessageBox.Show($"Compra realizada: {cantidad} x {_accionSeleccionada} @ ${precio:F2}");
+        }
     }
 }
