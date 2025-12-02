@@ -234,5 +234,34 @@ namespace InverTrack
             ActualizarGrafica();
             ActualizarPrecios();
         }
+
+        // [3] Actualiza los labels de precio actual y engancha los eventos para recalcular totales.
+        private void ActualizarPrecios()
+        {
+            // Usar intradía si hay datos; si no, caer al histórico
+            List<PrecioHistorico> fuente = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+            if (fuente.Count == 0) return;
+
+            var precioActual = fuente.Last().Precio;
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _ultimoPrecioPorSimbolo[_accionSeleccionada] = precioActual;
+            }
+
+            PrecioCompra.Text = $"${precioActual:F2}";
+            PrecioVenta.Text = $"${precioActual:F2}";
+
+            CantidadCompra.TextChanged -= Cantidad_TextChanged;
+            CantidadVenta.TextChanged -= Cantidad_TextChanged;
+            CantidadCompra.TextChanged += Cantidad_TextChanged;
+            CantidadVenta.TextChanged += Cantidad_TextChanged;
+        }
+
+        // [3] Cada vez que cambia una cantidad, recalculamos los totales de compra/venta.
+        private void Cantidad_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ActualizarTotal();
+        }
     }
 }
