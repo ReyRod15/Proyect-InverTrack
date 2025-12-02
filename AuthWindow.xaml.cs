@@ -9,5 +9,6 @@ namespace InverTrack
     // [4] Ventana principal de autenticacion (login y registro).
     public partial class AuthWindow : Window
     {
-}
+
+    }
 }
