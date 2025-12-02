@@ -174,5 +174,15 @@ namespace InverTrack
 
             ResumenAcciones.Text = "Ganancia por acción (operaciones cerradas):\n" + string.Join("\n", lineas);
         }
+
+        // [3] Envía la ventana actual a impresión (o PDF si la impresora lo soporta).
+        private void BtnImprimir_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new System.Windows.Controls.PrintDialog();
+            if (dlg.ShowDialog() == true)
+            {
+                dlg.PrintVisual(this, "Reporte InverTrack");
+            }
+        }
     }
 }
