@@ -1,0 +1,252 @@
+<Window x:Class="InverTrack.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="InverTrack - Trading" Height="700" Width="1200" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}" Closed="Window_Closed">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Panel Izquierdo -->
+        <Grid Grid.Column="0" Background="{DynamicResource CardBackgroundBrush}" Margin="0,0,5,0">
+            <StackPanel Margin="15">
+                <TextBlock Text="InverTrack" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,20"/>
+
+                <!-- Información del Usuario -->
+                <Border Background="{DynamicResource InputBackgroundBrush}" Padding="10" CornerRadius="6" Margin="0,0,0,15" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Usuario:" FontWeight="Bold" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="LblUsuario" Text="Usuario" Margin="0,0,0,10" Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+                        <TextBlock Text="Dinero Disponible:" FontWeight="Bold" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="LblDinero" Text="$10,000.00" Foreground="{DynamicResource AccentBuyBrush}" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Valor Cartera:" FontWeight="Bold" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="LblCartera" Text="$0.00" Foreground="#FFB74D" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+
+                <Separator Margin="0,10,0,10"/>
+
+                <!-- Acciones Disponibles -->
+                <TextBlock Text="Acciones Disponibles" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <ListBox x:Name="AccionesList" Height="200" Margin="0,0,0,15" SelectionChanged="AccionesList_SelectionChanged" 
+                         Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource WindowBorderBrush}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Simbolo}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding Precio, StringFormat='${0:F2}'}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Separator Margin="0,10,0,10"/>
+
+                <!-- Operaciones / Cartera -->
+                <TextBlock Text="Mi Cartera" FontSize="14" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <ListBox x:Name="CarteraList" Height="130" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource WindowBorderBrush}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Simbolo}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding CantidadTexto}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ValorYGanancia}" FontSize="12" Foreground="{Binding GananciaColor}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </StackPanel>
+        </Grid>
+
+        <!-- Panel Derecho -->
+        <Grid Grid.Column="1" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Barra superior derecha con botones de ajustes y cerrar sesión -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,5" HorizontalAlignment="Right">
+                <Button x:Name="BtnSettings" Content="Ajustes" Click="BtnSettings_Click"
+                        Margin="0,0,8,0" Padding="10,4" FontSize="11"
+                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1"/>
+                <Button x:Name="BtnLogout" Content="Cerrar sesión" Click="BtnLogout_Click"
+                        Margin="0,0,0,0" Padding="10,4" FontSize="11"
+                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1"/>
+            </DockPanel>
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Stretch">
+                <!-- Encabezado superior de la gráfica: botones de vista + nombre de la acción + logo -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Botones de vista a la izquierda -->
+                    <StackPanel Orientation="Horizontal" Grid.Column="0" HorizontalAlignment="Left">
+                        <ToggleButton x:Name="BtnVistaActual" Content="Actual" Tag="actual"
+                                      Style="{StaticResource TogglePillStyle}" IsChecked="True" Margin="0,0,4,0"
+                                      Click="BtnVista_Click"/>
+                        <ToggleButton x:Name="BtnVistaMeses" Content="Últimos meses" Tag="meses"
+                                      Style="{StaticResource TogglePillStyle}" Margin="0,0,4,0"
+                                      Click="BtnVista_Click"/>
+                        <ToggleButton x:Name="BtnVistaAnios" Content="Años" Tag="anios"
+                                      Style="{StaticResource TogglePillStyle}"
+                                      Click="BtnVista_Click"/>
+                    </StackPanel>
+
+                    <!-- Nombre de la acción en grande al centro -->
+                    <TextBlock x:Name="LblAccionTitulo"
+                               Grid.Column="1"
+                               Text="Selecciona una acción"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+                    <!-- Imagen pequeña de la acción a la derecha -->
+                    <Image x:Name="ImgAccion"
+                           Grid.Column="2"
+                           Width="32" Height="32"
+                           Margin="8,0,0,0"
+                           Stretch="UniformToFill"
+                           VerticalAlignment="Center"
+                           Visibility="Collapsed"/>
+                </Grid>
+
+                <!-- Gráfica -->
+                <Border Background="{DynamicResource ChartBackgroundBrush}" CornerRadius="5" Height="450" Margin="0,0,0,10" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                    <oxy:PlotView x:Name="PrecioPlot" Model="{Binding PlotModel}" Background="{DynamicResource ChartBackgroundBrush}"/>
+                </Border>
+
+                <!-- Panel de Operaciones -->
+                <Grid Height="210">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Compra -->
+                    <Border Grid.Column="0" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="5" Margin="0,0,5,0" Padding="10" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Comprar" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBuyBrush}" Margin="0,0,0,4"/>
+
+                            <TextBlock Text="Cantidad:" Margin="0,0,0,2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <Grid Height="28" Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="28"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="-" Click="BtnMenosCompra_Click" 
+                                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" 
+                                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" FontWeight="Bold"/>
+                                <TextBox x:Name="CantidadCompra" Grid.Column="1" Style="{StaticResource NumericTextBoxStyle}" Margin="4,0"/>
+                                <Button Grid.Column="2" Content="+" Click="BtnMasCompra_Click" 
+                                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" 
+                                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" FontWeight="Bold"/>
+                            </Grid>
+
+                            <TextBlock Text="Precio Unit.:" Margin="0,0,0,2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="PrecioCompra" Text="$0.00" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+                            <TextBlock x:Name="TotalCompra" Text="Total: $0.00" FontWeight="Bold" Margin="0,0,0,4" Foreground="{DynamicResource AccentBuyBrush}" FontSize="12"/>
+
+                            <Button x:Name="BtnComprar" Content="Comprar" Click="BtnComprar_Click" 
+                                    Background="{DynamicResource AccentBuyBrush}" Foreground="White" Height="28" Width="100" FontSize="12"
+                                    HorizontalAlignment="Right" Padding="8,2"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Venta -->
+                    <Border Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="5" Margin="5,0,0,0" Padding="10" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Vender" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentSellBrush}" Margin="0,0,0,4"/>
+
+                            <TextBlock Text="Cantidad:" Margin="0,0,0,2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <Grid Height="28" Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="28"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="-" Click="BtnMenosVenta_Click" 
+                                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" 
+                                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" FontWeight="Bold"/>
+                                <TextBox x:Name="CantidadVenta" Grid.Column="1" Style="{StaticResource NumericTextBoxStyle}" Margin="4,0"/>
+                                <Button Grid.Column="2" Content="+" Click="BtnMasVenta_Click" 
+                                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" 
+                                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" FontWeight="Bold"/>
+                            </Grid>
+
+                            <TextBlock Text="Precio Unit.:" Margin="0,0,0,2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="PrecioVenta" Text="$0.00" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+                            <TextBlock x:Name="TotalVenta" Text="Total: $0.00" FontWeight="Bold" Margin="0,0,0,4" Foreground="{DynamicResource AccentSellBrush}" FontSize="12"/>
+
+                            <Button x:Name="BtnVender" Content="Vender" Click="BtnVender_Click" 
+                                    Background="{DynamicResource AccentSellBrush}" Foreground="White" Height="28" Width="100" FontSize="12"
+                                    HorizontalAlignment="Right" Padding="8,2"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Configuración de tiempo y reporte -->
+                <Grid Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Grid.Column="0" HorizontalAlignment="Left">
+                        <ToggleButton x:Name="ToggleVelas" Content="Velas" Margin="0,0,0,0" Padding="10,2" FontSize="11"
+                                      Style="{StaticResource TogglePillStyle}"
+                                      Checked="ToggleVelas_Checked" Unchecked="ToggleVelas_Unchecked"/>
+
+                        <Button x:Name="BtnReporte" Content="Ver reporte" Click="BtnReporte_Click" 
+                                Margin="12,0,0,0" Style="{DynamicResource PrimaryButtonStyle}"/>
+
+                        <Button x:Name="BtnIrActual" Content="Actualizar" Click="BtnIrActual_Click"
+                                Margin="8,0,0,0" Padding="10,2" Background="{DynamicResource CardBackgroundBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11"
+                                BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1"/>
+
+                        <!-- ComboBox oculto para mantener compatibilidad con la lógica de cambio de vista -->
+                        <ComboBox x:Name="RangoTiempoCombo" Width="0" Height="0" Visibility="Collapsed" SelectionChanged="RangoTiempoCombo_SelectionChanged">
+                            <ComboBoxItem Content="Actual" Tag="actual" IsSelected="True"/>
+                            <ComboBoxItem Content="Últimos meses" Tag="meses"/>
+                            <ComboBoxItem Content="Años" Tag="anios"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Botón de modo oscuro anclado a la derecha -->
+                    <ToggleButton x:Name="DarkModeToggle" Grid.Column="1" Content="☀" Margin="12,0,0,0" Padding="10,2" FontSize="13" Width="40" Height="28"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  ToolTip="Cambiar modo claro/oscuro"
+                                  Checked="DarkModeToggle_Checked" Unchecked="DarkModeToggle_Unchecked"/>
+                </Grid>
+
+                <!-- Indicador sutil de que los datos son simulados -->
+                <TextBlock x:Name="LblDatosSimulados"
+                           Text="Datos simulados (sin conexión con mercado real)"
+                           Margin="2,4,0,0"
+                           HorizontalAlignment="Left"
+                           FontSize="9"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Opacity="0.5"
+                           Visibility="Collapsed"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

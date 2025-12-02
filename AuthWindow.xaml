@@ -1,0 +1,76 @@
+<Window x:Class="InverTrack.AuthWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="InverTrack - Autenticación" Height="500" Width="500" WindowStartupLocation="CenterScreen" 
+        Background="{DynamicResource AppBackgroundBrush}" ResizeMode="NoResize">
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="20" Width="380" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel>
+                <TextBlock Text="InverTrack" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,10" TextAlignment="Center"/>
+                <TextBlock Text="Simulador de Bolsa de Valores" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,20" TextAlignment="Center"/>
+
+                <StackPanel x:Name="LoginPanel">
+                    <TextBlock Text="Iniciar Sesión" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    
+                    <TextBlock Text="Usuario:" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="LoginUsername" Padding="10" Margin="0,0,0,10" FontSize="13" KeyDown="Login_KeyDown"
+                             Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+
+                    <TextBlock Text="Contraseña:" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <PasswordBox x:Name="LoginPassword" Padding="10" Margin="0,0,0,10" FontSize="13" KeyDown="Login_KeyDown"
+                                 Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+
+                    <Button x:Name="BtnLogin" Content="Iniciar Sesión" Click="BtnLogin_Click" 
+                            Style="{StaticResource PrimaryButtonStyle}" Height="34" FontSize="13" Margin="0,0,0,6"/>
+                    
+                    <Button x:Name="BtnForgotPassword" Content="¿Olvidaste tu contraseña?" Click="BtnForgotPassword_Click"
+                            Height="26" FontSize="11" Margin="0,0,0,10" Background="{DynamicResource CardBackgroundBrush}"
+                            Foreground="{DynamicResource PrimaryBrush}" BorderThickness="0" HorizontalAlignment="Left"/>
+
+                    <Button x:Name="BtnToRegister" Content="¿No tienes cuenta? Registrarse" Click="BtnToRegister_Click" 
+                            Height="30" FontSize="12" Margin="0,0,0,0" Background="{DynamicResource CardBackgroundBrush}"
+                            Foreground="{DynamicResource PrimaryBrush}" BorderBrush="{DynamicResource WindowBorderBrush}"/>
+                </StackPanel>
+
+                <StackPanel x:Name="RegisterPanel" Visibility="Collapsed">
+                    <TextBlock Text="Crear Cuenta" FontSize="16" FontWeight="Bold" Margin="20,10,0,15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    
+                    <TextBlock Text="Usuario:" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="RegisterUsername" Padding="10" Margin="0,0,0,8" FontSize="13"
+                             Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+
+                    <TextBlock Text="Correo electrónico:" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="RegisterEmail" Padding="10" Margin="0,0,0,8" FontSize="13"
+                             Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+
+                    <TextBlock Text="Contraseña:" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <PasswordBox x:Name="RegisterPassword" Padding="10" Margin="0,0,0,8" FontSize="13"
+                                 Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+
+                    <TextBlock Text="Dinero Inicial ($):" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="RegisterMoney" Padding="10" Margin="0,0,0,10" FontSize="13" Text="10000"
+                             Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+
+                    <Button x:Name="BtnRegister" Content="Enviar código de verificación" Click="BtnRegister_Click" 
+                            Style="{StaticResource PrimaryButtonStyle}" Height="34" FontSize="13" Margin="0,0,0,6"/>
+
+                    <StackPanel x:Name="RegisterCodePanel" Visibility="Collapsed" Margin="0,4,0,0">
+                        <TextBlock Text="Ingresa el código enviado a tu correo:" Margin="0,4,0,2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox x:Name="RegisterCode" Padding="8" FontSize="13"
+                                 Background="{DynamicResource InputBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource InputBorderBrush}"/>
+                        <Button x:Name="BtnConfirmRegisterCode" Content="Confirmar registro" Click="BtnConfirmRegisterCode_Click" 
+                                Style="{StaticResource PrimaryButtonStyle}" Height="30" FontSize="12" Margin="0,6,0,0"/>
+                    </StackPanel>
+
+                    <Button x:Name="BtnToLogin" Content="¿Ya tienes cuenta? Iniciar Sesión" Click="BtnToLogin_Click" 
+                            Margin="0,10,0,0" Height="30" FontSize="12" Background="{DynamicResource CardBackgroundBrush}"
+                            Foreground="{DynamicResource PrimaryBrush}" BorderBrush="{DynamicResource WindowBorderBrush}"/>
+                </StackPanel>
+
+                <TextBlock x:Name="ErrorMessage" Foreground="{DynamicResource AccentSellBrush}" Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12"/>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</Window>
