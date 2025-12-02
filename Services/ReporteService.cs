@@ -100,5 +100,18 @@ namespace InverTrack.Services
                 EstadisticasPorAccion = estadisticasPorAccion
             };
         }
+
+        // [3] Lista los archivos de reporte que ya se han generado.
+        public List<string> ObtenerReportesGuardados()
+        {
+            if (!Directory.Exists(_carpetaReportes))
+                return new List<string>();
+
+            return Directory.GetFiles(_carpetaReportes, "*.json")
+                .Select(f => Path.GetFileName(f) ?? "")
+                .ToList();
+        }
+
+        public string ObtenerRutaReportesFolder() => _carpetaReportes;
     }
 }
