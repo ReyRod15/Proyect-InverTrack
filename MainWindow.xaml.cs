@@ -581,5 +581,53 @@ namespace InverTrack
                 });
             });
         }
+
+        // [3] Obtiene el precio promedio de la posición ABIERTA (FIFO) para un símbolo.
+        private decimal CalcularPromedioCompraAbierto(string simbolo)
+        {
+            if (_usuarioActual == null)
+                return 0m;
+
+            var transaccionesSimbolo = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuarioActual.NombreUsuario)
+                .Where(t => t.Simbolo == simbolo)
+                .OrderBy(t => t.Fecha)
+                .ToList();
+
+            var lotes = new List<(int Cantidad, decimal Precio)>();
+
+            foreach (var t in transaccionesSimbolo)
+            {
+                if (t.Tipo == "Compra")
+                {
+                    lotes.Add((t.Cantidad, t.Precio));
+                }
+                else if (t.Tipo == "Venta")
+                {
+                    int porVender = t.Cantidad;
+                    while (porVender > 0 && lotes.Count > 0)
+                    {
+                        var lote = lotes[0];
+                        if (porVender >= lote.Cantidad)
+                        {
+                            porVender -= lote.Cantidad;
+                            lotes.RemoveAt(0);
+                        }
+                        else
+                        {
+                            lote.Cantidad -= porVender;
+                            lotes[0] = lote;
+                            porVender = 0;
+                        }
+                    }
+                }
+            }
+
+            int cantidadAbierta = lotes.Sum(l => l.Cantidad);
+            if (cantidadAbierta <= 0)
+                return 0m;
+
+            decimal costoAbierto = lotes.Sum(l => l.Cantidad * l.Precio);
+            return costoAbierto > 0 ? costoAbierto / cantidadAbierta : 0m;
+        }
     }
 }
