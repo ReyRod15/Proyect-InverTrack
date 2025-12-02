@@ -535,43 +535,6 @@ namespace InverTrack
             ActualizarGrafica();
         }
 
-        // [2] Ajusta los colores de la gráfica (OxyPlot) al tema actual.
-        private void AplicarTemaGrafica()
-        {
-            if (_modeloGrafica == null || _ejeX == null || _ejeY == null)
-                return;
-
-            if (_modoOscuro)
-            {
-                _modeloGrafica.TextColor = OxyColor.FromRgb(249, 250, 251);
-                _modeloGrafica.PlotAreaBorderColor = OxyColor.FromRgb(55, 65, 81);
-                _ejeX.MajorGridlineColor = OxyColor.FromRgb(55, 65, 81);
-                _ejeX.MinorGridlineColor = OxyColor.FromRgb(31, 41, 55);
-                _ejeY.MajorGridlineColor = OxyColor.FromRgb(55, 65, 81);
-                _ejeY.MinorGridlineColor = OxyColor.FromRgb(31, 41, 55);
-                if (_anotacionPrecioActual != null)
-                {
-                    _anotacionPrecioActual.Background = OxyColor.FromArgb(220, 31, 41, 55);
-                }
-            }
-            else
-            {
-                _modeloGrafica.TextColor = OxyColor.FromRgb(17, 24, 39);
-                _modeloGrafica.PlotAreaBorderColor = OxyColor.FromRgb(209, 213, 219);
-                _ejeX.MajorGridlineColor = OxyColor.FromRgb(209, 213, 219);
-                _ejeX.MinorGridlineColor = OxyColor.FromRgb(229, 231, 235);
-                _ejeY.MajorGridlineColor = OxyColor.FromRgb(209, 213, 219);
-                _ejeY.MinorGridlineColor = OxyColor.FromRgb(229, 231, 235);
-                if (_anotacionPrecioActual != null)
-                {
-                    _anotacionPrecioActual.Background = OxyColor.FromAColor(180, OxyColors.White);
-                }
-            }
-
-            _modeloGrafica.InvalidatePlot(false);
-
-        }
-        
         // [2] Mantiene el intervalo del timer de actualización en un valor fijo (3s).
         private void AjustarIntervaloPorRango()
         {
