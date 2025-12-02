@@ -52,6 +52,7 @@ namespace InverTrack
         private OxyPlot.Annotations.TextAnnotation? _anotacionPrecioActual;
 
 
+
         // [1] Ventana principal del simulador; inicializa la interfaz y el usuario activo.
         public MainWindow(string? nombreUsuario = null)
         {
@@ -100,6 +101,138 @@ namespace InverTrack
             }
 
             AccionesList.ItemsSource = listaAcciones;
+        }
+
+        // [1] Al cambiar de acción en la lista, guarda la anterior en cache y carga la nueva gráfica.
+        private async void AccionesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (AccionesList.SelectedItem == null) return;
+
+            dynamic item = AccionesList.SelectedItem;
+
+            // Guardar en cache los datos de la acción anterior antes de cambiar
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _cacheHistorico[_accionSeleccionada] = _preciosHistoricos.ToList();
+                _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
+            }
+
+            _accionSeleccionada = item.Simbolo;
+
+            await CargarGrafica();
+        }
+
+        // [1] Carga histórico e intradía del símbolo seleccionado y ajusta la gráfica.
+        private async Task CargarGrafica()
+        {
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+                return;
+
+            DateTime hasta = DateTime.Now;
+            // Cargar siempre varios años hacia atrás para poder mostrar vistas de meses/años
+            DateTime desde = hasta.AddYears(-3);
+
+            // Intentar usar cache local primero
+            if (_cacheHistorico.TryGetValue(_accionSeleccionada, out var histCache) && histCache.Any())
+            {
+                _preciosHistoricos = histCache.ToList();
+            }
+            else
+            {
+                try
+                {
+                    _preciosHistoricos = await _servicioMercado.ObtenerHistorico(_accionSeleccionada, desde, hasta);
+                    _cacheHistorico[_accionSeleccionada] = _preciosHistoricos.ToList();
+                }
+                catch
+                {
+                    _preciosHistoricos = new List<PrecioHistorico>();
+                }
+            }
+
+            if (_cacheIntradia.TryGetValue(_accionSeleccionada, out var intraCache) && intraCache.Any())
+            {
+                _preciosIntradia = intraCache.ToList();
+            }
+            else
+            {
+                _preciosIntradia = new List<PrecioHistorico>();
+
+                // Crear primer punto intradía con el precio actual si no hay cache aún
+                try
+                {
+                    var precioActual = await _servicioMercado.ObtenerPrecioActual(_accionSeleccionada);
+                    if (precioActual > 0)
+                    {
+                        _preciosIntradia.Add(new PrecioHistorico
+                        {
+                            Fecha = DateTime.Now,
+                            Precio = precioActual,
+                            PrecioApertura = precioActual,
+                            PrecioMaximo = precioActual,
+                            PrecioMinimo = precioActual,
+                            Simbolo = _accionSeleccionada
+                        });
+                    }
+                }
+                catch
+                {
+                    // si falla, nos quedamos solo con histórico
+                }
+
+                _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
+            }
+
+            // Alinear el último punto histórico con el precio más reciente que usamos en el simulador
+            // para que el valor al final de la gráfica (ej. 28 de noviembre) coincida con el precio actual
+            // mostrado en la vista "Actual" y no haya diferencias de muchos dólares.
+            decimal precioActualReferencia = 0m;
+            if (_preciosIntradia.Any())
+            {
+                precioActualReferencia = _preciosIntradia.Last().Precio;
+            }
+            else if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                     _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                     precioDict > 0)
+            {
+                precioActualReferencia = precioDict;
+            }
+
+            if (precioActualReferencia > 0 && _preciosHistoricos.Any())
+            {
+                var ultimoHist = _preciosHistoricos.OrderBy(p => p.Fecha).Last();
+                ultimoHist.Precio = precioActualReferencia;
+
+                if (ultimoHist.PrecioMaximo == 0 || ultimoHist.PrecioMaximo < precioActualReferencia)
+                    ultimoHist.PrecioMaximo = precioActualReferencia;
+                if (ultimoHist.PrecioMinimo == 0 || ultimoHist.PrecioMinimo > precioActualReferencia)
+                    ultimoHist.PrecioMinimo = precioActualReferencia;
+                if (ultimoHist.PrecioApertura == 0)
+                    ultimoHist.PrecioApertura = precioActualReferencia;
+
+                if (!string.IsNullOrEmpty(_accionSeleccionada))
+                {
+                    _cacheHistorico[_accionSeleccionada] = _preciosHistoricos.ToList();
+                }
+            }
+
+            _debeRecalcularRangoX = true;
+
+            // Mostrar si los datos que alimentan el histórico son simulados o reales
+            ActualizarIndicadorDatosSimulados(_servicioMercado.UltimoHistoricoEsSimulado);
+
+            // Al cambiar de acción, recalculamos el eje Y desde cero para que
+            // el rango vertical se adapte al nuevo valor de la acción y no se
+            // hereden rangos exagerados de la acción anterior.
+            AsegurarModeloGrafica();
+            if (_ejeY != null)
+            {
+                _ejeY.Minimum = double.NaN;
+                _ejeY.Maximum = double.NaN;
+            }
+
+            ActualizarGrafica();
+            ActualizarPrecios();
         }
     }
 }
