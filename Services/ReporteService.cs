@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace InverTrack.Services
 {
-    // [3] Servicio de reportes (archivos JSON y estadÃ­sticas de operaciones).
+    // [3] Servicio de reportes (archivos JSON y estadi­sticas de operaciones).
     public class ReporteService
     {
         // [3] Dependencias y rutas
@@ -15,5 +15,15 @@ namespace InverTrack.Services
         private readonly string _carpetaReportes;
 
         // [3] Constructor
-}
+        public ReporteService()
+        {
+            _servicioAlmacenamiento = new StorageService();
+            _carpetaReportes = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "InverTrack", "Reportes");
+
+            if (!Directory.Exists(_carpetaReportes))
+            {
+                Directory.CreateDirectory(_carpetaReportes);
+            }
+        }
+    }
 }
