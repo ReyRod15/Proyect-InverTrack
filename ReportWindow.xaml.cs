@@ -37,5 +37,59 @@ namespace InverTrack
             CargarReporte();
         }
 
+        // [3] Carga las transacciones del usuario y arma la lista de operaciones cerradas.
+        private void CargarReporte()
+        {
+            var transacciones = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuario)
+                .OrderBy(t => t.Fecha)
+                .ToList();
+
+            if (transacciones.Count == 0)
+                return;
+
+            var compras = transacciones.Where(t => t.Tipo == "Compra").ToList();
+            var ventas = transacciones.Where(t => t.Tipo == "Venta").ToList();
+
+            // Construir operaciones cerradas emparejando cada venta con la última compra previa
+            var operacionesCerradas = new List<OperacionCerrada>();
+
+            foreach (var venta in ventas)
+            {
+                var comprasPrevias = compras
+                    .Where(c => c.Simbolo == venta.Simbolo && c.Fecha <= venta.Fecha)
+                    .OrderBy(c => c.Fecha)
+                    .ToList();
+
+                var ultimaCompra = comprasPrevias.LastOrDefault();
+                decimal precioCompraUnitario = ultimaCompra?.Precio ?? venta.Precio;
+                decimal totalCompra = Math.Round(precioCompraUnitario * venta.Cantidad, 2);
+
+                var op = new OperacionCerrada
+                {
+                    // Usar la última compra previa como fecha de compra
+                    FechaCompra = ultimaCompra?.Fecha ?? venta.Fecha,
+                    FechaVenta = venta.Fecha,
+                    Simbolo = venta.Simbolo,
+                    Cantidad = venta.Cantidad,
+                    PrecioCompra = Math.Round(precioCompraUnitario, 2),
+                    PrecioVenta = venta.Precio,
+                    TotalCompra = totalCompra,
+                    TotalVenta = venta.Total,
+                    Ganancia = venta.Total - totalCompra
+                };
+
+                operacionesCerradas.Add(op);
+            }
+
+            // Datos generales: solo mostrar la cantidad total de transacciones realizadas
+            ResumenGeneral.Text = $"Transacciones realizadas: {transacciones.Count}";
+
+            OperacionesGrid.ItemsSource = operacionesCerradas
+                .OrderByDescending(o => o.FechaVenta)
+                .ToList();
+
+            ConstruirGraficoMejoresAcciones(operacionesCerradas);
+        }
+
     }
 }
