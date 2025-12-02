@@ -629,5 +629,32 @@ namespace InverTrack
             decimal costoAbierto = lotes.Sum(l => l.Cantidad * l.Precio);
             return costoAbierto > 0 ? costoAbierto / cantidadAbierta : 0m;
         }
+
+        //Continuacion de codigo de diego
+        //Inicio del codigo de caleb 
+
+        // [3] Incrementa en +1 la cantidad de compra.
+        private void BtnMasCompra_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadCompra, 1);
+        }
+
+        // [3] Decrementa en -1 la cantidad de compra (sin bajar de cero).
+        private void BtnMenosCompra_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadCompra, -1);
+        }
+
+        // [3] Incrementa en +1 la cantidad de venta.
+        private void BtnMasVenta_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadVenta, 1);
+        }
+
+        // [3] Decrementa en -1 la cantidad de venta (sin bajar de cero).
+        private void BtnMenosVenta_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadVenta, -1);
+        }
     }
 }
