@@ -656,5 +656,21 @@ namespace InverTrack
         {
             IncrementarCantidad(CantidadVenta, -1);
         }
+
+        // [3] Rutina pequeña para sumar/restar cantidades en los TextBox numéricos.
+        private void IncrementarCantidad(TextBox textBox, int delta)
+        {
+            if (!int.TryParse(textBox.Text, out var valor))
+            {
+                valor = 0;
+            }
+
+            valor += delta;
+            if (valor < 0) valor = 0;
+
+            textBox.Text = valor.ToString();
+        }
+
+        //Continuacion del codigo de caleb
     }
 }
