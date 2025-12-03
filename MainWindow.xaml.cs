@@ -177,7 +177,7 @@ namespace InverTrack
                 }
                 catch
                 {
-                    // si falla, nos quedamos solo con histórico
+                    // si falla, nos quedamos solo con históric
                 }
 
                 _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
@@ -672,6 +672,226 @@ namespace InverTrack
         }
 
         //Continuacion del codigo de caleb
+        // [4] Cambia el modo de vista (actual/meses/años) y fuerza a recalcular rangos.
+        private void CambiarVista(string tag)
+        {
+            _modoVista = tag;
+            _debeRecalcularRangoX = true;
+
+            // Al cambiar de vista, reseteamos cualquier zoom manual previo para evitar que la gráfica "desaparezca"
+            AsegurarModeloGrafica();
+            _modeloGrafica?.ResetAllAxes();
+
+            AjustarIntervaloPorRango();
+            ActualizarGrafica();
+            ActualizarPrecios();
+        }
+
+        // [4] Mantiene compatibilidad con el ComboBox oculto que también cambia la vista.
+        private void RangoTiempoCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (RangoTiempoCombo.SelectedItem is ComboBoxItem item)
+            {
+                var tag = item.Tag?.ToString() ?? "actual";
+                CambiarVista(tag);
+            }
+        }
+
+        // [4] Handler genérico para los ToggleButtons de vista (Actual / Meses / Años).
+        private void BtnVista_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.Tag is string tag)
+            {
+                // Asegurar que solo un botón de vista quede activo visualmente
+                BtnVistaActual.IsChecked = ReferenceEquals(sender, BtnVistaActual);
+                BtnVistaMeses.IsChecked = ReferenceEquals(sender, BtnVistaMeses);
+                BtnVistaAnios.IsChecked = ReferenceEquals(sender, BtnVistaAnios);
+
+                CambiarVista(tag);
+            }
+        }
+
+        // [4] Abre la ventana de reporte para el usuario actual si tiene transacciones.
+        private void BtnReporte_Click(object sender, RoutedEventArgs e)
+        {
+            if (_usuarioActual == null)
+                return;
+
+            var transacciones = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuarioActual.NombreUsuario);
+            if (transacciones.Count == 0)
+            {
+                MessageBox.Show("Aún no hay transacciones para este usuario.", "Reporte", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var ventana = new ReportWindow(_usuarioActual.NombreUsuario);
+            ventana.Owner = this;
+            ventana.ShowDialog();
+        }
+
+        // [4] Activa el modo oscuro (tema de colores) en la aplicación.
+        private void DarkModeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            DarkModeToggle.Content = "🌙";
+            _modoOscuro = true;
+            ActivarModoOscuro(true);
+            AplicarTemaGrafica();
+        }
+
+        // [4] Vuelve al modo claro original.
+        private void DarkModeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            DarkModeToggle.Content = "☀";
+            _modoOscuro = false;
+            ActivarModoOscuro(false);
+            AplicarTemaGrafica();
+        }
+
+        // [4] Fuerza una actualización inmediata de precios y gráfica sin esperar al timer.
+        private void BtnIrActual_Click(object sender, RoutedEventArgs e)
+        {
+            // Forzar una actualización manual sin cambiar la vista ni el zoom actual
+            TimerActualizacion_Tick(null, EventArgs.Empty);
+        }
+
+
+        // [4] BtnVerAtras_Click ya no se usa; el botón está oculto en XAML.
+
+        // [4] Devuelve un nombre "bonito" para mostrar en el encabezado de la acción.
+        private string ObtenerNombreAccionLegible(string simbolo)
+        {
+            return simbolo switch
+            {
+                "AAPL" => "Apple Inc.",
+                "GOOGL" => "Alphabet Inc.",
+                "MSFT" => "Microsoft Corporation",
+                "AMZN" => "Amazon.com, Inc.",
+                "TSLA" => "Tesla, Inc.",
+                "META" => "Meta Platforms, Inc.",
+                "NVDA" => "NVIDIA Corporation",
+                "AMD" => "Advanced Micro Devices, Inc.",
+                _ => simbolo
+            };
+        }
+
+        // [4] Muestra u oculta el texto que avisa que los datos son simulados.
+        private void ActualizarIndicadorDatosSimulados(bool esSimulado)
+        {
+            if (LblDatosSimulados == null)
+                return;
+
+            LblDatosSimulados.Visibility = esSimulado ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // [4] Actualiza el título y el logo de la acción en la parte superior de la vista.
+        private void ActualizarEncabezadoAccion()
+        {
+            if (LblAccionTitulo == null || ImgAccion == null)
+                return;
+
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                LblAccionTitulo.Text = "Selecciona una acción";
+                ImgAccion.Source = null;
+                ImgAccion.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var simbolo = _accionSeleccionada;
+            var nombre = ObtenerNombreAccionLegible(simbolo);
+            LblAccionTitulo.Text = $"{nombre} ({simbolo})";
+
+            try
+            {
+                var uri = new Uri($"/Images/{simbolo}.png", UriKind.Relative);
+                var bitmap = new BitmapImage(uri);
+                ImgAccion.Source = bitmap;
+                ImgAccion.Visibility = Visibility.Visible;
+            }
+            catch
+            {
+                ImgAccion.Source = null;
+                ImgAccion.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // [4] Cambia los brushes de recursos globales entre paleta clara y oscura.
+        private void ActivarModoOscuro(bool oscuro)
+        {
+            var resources = Application.Current.Resources;
+
+            if (oscuro)
+            {
+                resources["AppBackgroundBrush"] = resources["DarkAppBackgroundBrush"];
+                resources["CardBackgroundBrush"] = resources["DarkCardBackgroundBrush"];
+                resources["PrimaryBrush"] = resources["DarkPrimaryBrush"];
+                resources["SecondaryBrush"] = resources["DarkSecondaryBrush"];
+                resources["TextPrimaryBrush"] = resources["DarkTextPrimaryBrush"];
+                resources["TextSecondaryBrush"] = resources["DarkTextSecondaryBrush"];
+                resources["InputBackgroundBrush"] = resources["DarkInputBackgroundBrush"];
+                resources["InputBorderBrush"] = resources["DarkInputBorderBrush"];
+                resources["ChartBackgroundBrush"] = resources["DarkChartBackgroundBrush"];
+            }
+            else
+            {
+                // Volver a la paleta clara inicial
+                resources["AppBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(243, 244, 246));
+                resources["CardBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+                resources["PrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 136, 229));
+                resources["SecondaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(25, 118, 210));
+                resources["TextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(17, 24, 39));
+                resources["TextSecondaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 85, 99));
+                resources["InputBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 250, 251));
+                resources["InputBorderBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(209, 213, 219));
+                resources["ChartBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+            }
+        }
+
+        // [4] Al cerrar la ventana detenemos timers y guardamos el usuario actual.
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            _temporizadorActualizacion?.Stop();
+            _temporizadorPrecioRapido?.Stop();
+            if (_usuarioActual != null)
+            {
+                _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            }
+        }
+
+        // [4] Cierra sesión del usuario actual y vuelve a la ventana de autenticación.
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("¿Seguro que quieres cerrar sesión?", "Cerrar sesión", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            _temporizadorActualizacion?.Stop();
+            _temporizadorPrecioRapido?.Stop();
+            if (_usuarioActual != null)
+            {
+                _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            }
+
+            var auth = new AuthWindow();
+            auth.Show();
+            Close();
+        }
+
+        // [4] Abre la ventana de ajustes (correo, contraseña) para el usuario actual.
+        private void BtnSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (_usuarioActual == null)
+                return;
+
+            var ajustes = new SettingsWindow(_usuarioActual);
+            ajustes.Owner = this;
+            ajustes.ShowDialog();
+
+            // Tras posibles cambios de correo/contraseña, recargar info de usuario
+            ActualizarInfoUsuario();
+        }
+
+
     }
         // ===== [2] Sección: gráfica principal y control de zoom =====
 
