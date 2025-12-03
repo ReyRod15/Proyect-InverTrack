@@ -782,5 +782,69 @@ namespace InverTrack
 
             LblDatosSimulados.Visibility = esSimulado ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        // [4] Actualiza el título y el logo de la acción en la parte superior de la vista.
+        private void ActualizarEncabezadoAccion()
+        {
+            if (LblAccionTitulo == null || ImgAccion == null)
+                return;
+
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                LblAccionTitulo.Text = "Selecciona una acción";
+                ImgAccion.Source = null;
+                ImgAccion.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var simbolo = _accionSeleccionada;
+            var nombre = ObtenerNombreAccionLegible(simbolo);
+            LblAccionTitulo.Text = $"{nombre} ({simbolo})";
+
+            try
+            {
+                var uri = new Uri($"/Images/{simbolo}.png", UriKind.Relative);
+                var bitmap = new BitmapImage(uri);
+                ImgAccion.Source = bitmap;
+                ImgAccion.Visibility = Visibility.Visible;
+            }
+            catch
+            {
+                ImgAccion.Source = null;
+                ImgAccion.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // [4] Cambia los brushes de recursos globales entre paleta clara y oscura.
+        private void ActivarModoOscuro(bool oscuro)
+        {
+            var resources = Application.Current.Resources;
+
+            if (oscuro)
+            {
+                resources["AppBackgroundBrush"] = resources["DarkAppBackgroundBrush"];
+                resources["CardBackgroundBrush"] = resources["DarkCardBackgroundBrush"];
+                resources["PrimaryBrush"] = resources["DarkPrimaryBrush"];
+                resources["SecondaryBrush"] = resources["DarkSecondaryBrush"];
+                resources["TextPrimaryBrush"] = resources["DarkTextPrimaryBrush"];
+                resources["TextSecondaryBrush"] = resources["DarkTextSecondaryBrush"];
+                resources["InputBackgroundBrush"] = resources["DarkInputBackgroundBrush"];
+                resources["InputBorderBrush"] = resources["DarkInputBorderBrush"];
+                resources["ChartBackgroundBrush"] = resources["DarkChartBackgroundBrush"];
+            }
+            else
+            {
+                // Volver a la paleta clara inicial
+                resources["AppBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(243, 244, 246));
+                resources["CardBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+                resources["PrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 136, 229));
+                resources["SecondaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(25, 118, 210));
+                resources["TextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(17, 24, 39));
+                resources["TextSecondaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 85, 99));
+                resources["InputBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 250, 251));
+                resources["InputBorderBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(209, 213, 219));
+                resources["ChartBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+            }
+        }
     }
 }
