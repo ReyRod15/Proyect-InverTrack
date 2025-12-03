@@ -134,5 +134,52 @@ namespace InverTrack
             ErrorMessage.Visibility = Visibility.Visible;
             RegisterCodePanel.Visibility = Visibility.Visible;
         }
+
+
+        // [4] Permite hacer login presionando Enter en los campos de usuario/contraseña.
+        private void Login_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                BtnLogin_Click(sender, e);
+            }
+        }
+
+        // [4] Confirma el código de registro y crea la cuenta si todo coincide.
+        private async void BtnConfirmRegisterCode_Click(object sender, RoutedEventArgs e)
+        {
+            if (_usuarioRegistroPendiente == null || string.IsNullOrEmpty(_codigoRegistroPendiente))
+            {
+                ErrorMessage.Text = "No hay un registro pendiente. Vuelve a completar el formulario.";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var codigoIngresado = RegisterCode.Text?.Trim();
+            if (string.IsNullOrEmpty(codigoIngresado))
+            {
+                ErrorMessage.Text = "Ingresa el código de verificación";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (!string.Equals(codigoIngresado, _codigoRegistroPendiente))
+            {
+                ErrorMessage.Text = "Código incorrecto";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            _usuarioRegistroPendiente.EmailVerificado = true;
+            _servicioAlmacenamiento.GuardarUsuario(_usuarioRegistroPendiente);
+
+            ErrorMessage.Text = string.Empty;
+            ErrorMessage.Visibility = Visibility.Collapsed;
+
+            // Iniciar sesión automáticamente después del registro
+            MainWindow mainWindow = new(_usuarioRegistroPendiente.NombreUsuario);
+            mainWindow.Show();
+            Close();
+        }
     }
 }
