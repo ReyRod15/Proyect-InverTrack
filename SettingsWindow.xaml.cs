@@ -133,6 +133,80 @@ namespace InverTrack
             CargarDatosIniciales();
         }
 
+        // [4] Envía un código al correo actual para autorizar cambio de contraseña.
+        private async void BtnEnviarCodigoPwd_Click(object sender, RoutedEventArgs e)
+        {
+            LblError.Text = string.Empty;
+
+            if (string.IsNullOrEmpty(_usuario.Email) || !_usuario.EmailVerificado)
+            {
+                LblError.Text = "Necesitas tener un correo verificado para cambiar la contraseña.";
+                return;
+            }
+
+            _codigoPwdPendiente = UtilidadesValidacion.GenerarCodigoVerificacion();
+
+            await _servicioEmail.EnviarCodigoAsync(_usuario.Email, "Cambio de contraseña - InverTrack",
+                $"Tu código para cambiar la contraseña es: {_codigoPwdPendiente}");
+
+            PanelCodigoPwd.Visibility = Visibility.Visible;
+            LblError.Text = "Se envió un código a tu correo. Ingrésalo junto con la nueva contraseña.";
+        }
+
+        // [4] Valida el código y aplica la nueva contraseña.
+        private void BtnConfirmarPwd_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_codigoPwdPendiente))
+            {
+                LblError.Text = "Primero solicita un código para cambiar la contraseña.";
+                return;
+            }
+
+            var codigo = TxtCodigoPwd.Text?.Trim();
+            if (string.IsNullOrEmpty(codigo))
+            {
+                LblError.Text = "Ingresa el código de verificación";
+                return;
+            }
+
+            if (!string.Equals(codigo, _codigoPwdPendiente))
+            {
+                LblError.Text = "Código de verificación incorrecto";
+                return;
+            }
+
+            var nueva = TxtNuevaPwd.Password;
+            var confirmar = TxtConfirmarPwd.Password;
+
+            if (string.IsNullOrEmpty(nueva) || string.IsNullOrEmpty(confirmar))
+            {
+                LblError.Text = "Ingresa y confirma la nueva contraseña";
+                return;
+            }
+
+            if (nueva != confirmar)
+            {
+                LblError.Text = "Las contraseñas no coinciden";
+                return;
+            }
+
+            _usuario.Contrasena = nueva;
+            _servicioAlmacenamiento.GuardarUsuario(_usuario);
+
+            _codigoPwdPendiente = null;
+            TxtCodigoPwd.Text = string.Empty;
+            TxtNuevaPwd.Password = string.Empty;
+            TxtConfirmarPwd.Password = string.Empty;
+
+            MessageBox.Show("Contraseña actualizada correctamente.", "Ajustes", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // [4] Cierra la ventana de ajustes sin más cambios.
+        private void BtnCerrar_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
 
     }
 }
