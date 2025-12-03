@@ -2,7 +2,7 @@
 
 namespace InverTrack.Models
 {
-    // [3] Modelo de Ã­tem para mostrar posiciones en "Mi Cartera".
+    // [3] Modelo de ítem para mostrar posiciones en "Mi Cartera".
     public class CarteraItem
     {
         public string Simbolo { get; set; } = string.Empty;
