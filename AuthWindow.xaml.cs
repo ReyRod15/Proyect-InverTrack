@@ -67,5 +67,72 @@ namespace InverTrack
             ErrorMessage.Text = string.Empty;
             ErrorMessage.Visibility = Visibility.Collapsed;
         }
+
+
+        // [4] Valida los datos de registro y envía un código de verificación al correo.
+        private async void BtnRegister_Click(object sender, RoutedEventArgs e)
+        {
+            var usuario = RegisterUsername.Text?.Trim();
+            var email = RegisterEmail.Text?.Trim();
+            var contrasena = RegisterPassword.Password;
+            var dineroText = RegisterMoney.Text?.Trim();
+
+            if (string.IsNullOrEmpty(usuario) || string.IsNullOrEmpty(contrasena) ||
+                string.IsNullOrEmpty(dineroText) || string.IsNullOrEmpty(email))
+            {
+                ErrorMessage.Text = "Por favor completa todos los campos";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (_servicioAlmacenamiento.ObtenerUsuario(usuario) != null)
+            {
+                ErrorMessage.Text = "El usuario ya existe";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (_servicioAlmacenamiento.ObtenerUsuarioPorEmail(email) != null)
+            {
+                ErrorMessage.Text = "Ya existe un usuario con ese correo";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (!decimal.TryParse(dineroText, out decimal dinero) || dinero <= 0)
+            {
+                ErrorMessage.Text = "Ingresa una cantidad válida";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (!UtilidadesValidacion.EsEmailValido(email))
+            {
+                ErrorMessage.Text = "Ingresa un correo electrónico válido";
+                ErrorMessage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var nuevoUsuario = new Usuario
+            {
+                NombreUsuario = usuario,
+                Contrasena = contrasena,
+                Dinero = dinero,
+                Email = email,
+                EmailVerificado = false
+            };
+
+            // Generar código de verificación de 6 dígitos
+            var codigo = UtilidadesValidacion.GenerarCodigoVerificacion();
+            _codigoRegistroPendiente = codigo;
+            _usuarioRegistroPendiente = nuevoUsuario;
+
+            await _servicioEmail.EnviarCodigoAsync(email, "Verificación de correo - InverTrack",
+                $"Tu código de verificación para InverTrack es: {codigo}");
+
+            ErrorMessage.Text = "Se envió un código de verificación a tu correo. Ingresa el código para completar el registro.";
+            ErrorMessage.Visibility = Visibility.Visible;
+            RegisterCodePanel.Visibility = Visibility.Visible;
+        }
     }
 }
