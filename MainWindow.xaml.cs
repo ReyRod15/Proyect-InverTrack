@@ -177,7 +177,7 @@ namespace InverTrack
                 }
                 catch
                 {
-                    // si falla, nos quedamos solo con histórico
+                    // si falla, nos quedamos solo con históric
                 }
 
                 _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
