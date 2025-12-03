@@ -696,5 +696,37 @@ namespace InverTrack
                 CambiarVista(tag);
             }
         }
+
+        // [4] Handler genérico para los ToggleButtons de vista (Actual / Meses / Años).
+        private void BtnVista_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.Tag is string tag)
+            {
+                // Asegurar que solo un botón de vista quede activo visualmente
+                BtnVistaActual.IsChecked = ReferenceEquals(sender, BtnVistaActual);
+                BtnVistaMeses.IsChecked = ReferenceEquals(sender, BtnVistaMeses);
+                BtnVistaAnios.IsChecked = ReferenceEquals(sender, BtnVistaAnios);
+
+                CambiarVista(tag);
+            }
+        }
+
+        // [4] Abre la ventana de reporte para el usuario actual si tiene transacciones.
+        private void BtnReporte_Click(object sender, RoutedEventArgs e)
+        {
+            if (_usuarioActual == null)
+                return;
+
+            var transacciones = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuarioActual.NombreUsuario);
+            if (transacciones.Count == 0)
+            {
+                MessageBox.Show("Aún no hay transacciones para este usuario.", "Reporte", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var ventana = new ReportWindow(_usuarioActual.NombreUsuario);
+            ventana.Owner = this;
+            ventana.ShowDialog();
+        }
     }
 }
