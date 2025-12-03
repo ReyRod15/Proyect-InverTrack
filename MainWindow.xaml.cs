@@ -877,6 +877,20 @@ namespace InverTrack
             Close();
         }
 
+        // [4] Abre la ventana de ajustes (correo, contraseña) para el usuario actual.
+        private void BtnSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (_usuarioActual == null)
+                return;
+
+            var ajustes = new SettingsWindow(_usuarioActual);
+            ajustes.Owner = this;
+            ajustes.ShowDialog();
+
+            // Tras posibles cambios de correo/contraseña, recargar info de usuario
+            ActualizarInfoUsuario();
+        }
+
 
     }
 }
