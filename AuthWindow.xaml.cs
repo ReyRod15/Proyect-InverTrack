@@ -181,5 +181,13 @@ namespace InverTrack
             mainWindow.Show();
             Close();
         }
+
+        // [4] Abre la ventana de recuperación de contraseña.
+        private void BtnForgotPassword_Click(object sender, RoutedEventArgs e)
+        {
+            var ventana = new RecoverPasswordWindow();
+            ventana.Owner = this;
+            ventana.ShowDialog();
+        }
     }
 }
