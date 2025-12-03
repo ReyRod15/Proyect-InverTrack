@@ -753,5 +753,34 @@ namespace InverTrack
             // Forzar una actualización manual sin cambiar la vista ni el zoom actual
             TimerActualizacion_Tick(null, EventArgs.Empty);
         }
+
+
+        // [4] BtnVerAtras_Click ya no se usa; el botón está oculto en XAML.
+
+        // [4] Devuelve un nombre "bonito" para mostrar en el encabezado de la acción.
+        private string ObtenerNombreAccionLegible(string simbolo)
+        {
+            return simbolo switch
+            {
+                "AAPL" => "Apple Inc.",
+                "GOOGL" => "Alphabet Inc.",
+                "MSFT" => "Microsoft Corporation",
+                "AMZN" => "Amazon.com, Inc.",
+                "TSLA" => "Tesla, Inc.",
+                "META" => "Meta Platforms, Inc.",
+                "NVDA" => "NVIDIA Corporation",
+                "AMD" => "Advanced Micro Devices, Inc.",
+                _ => simbolo
+            };
+        }
+
+        // [4] Muestra u oculta el texto que avisa que los datos son simulados.
+        private void ActualizarIndicadorDatosSimulados(bool esSimulado)
+        {
+            if (LblDatosSimulados == null)
+                return;
+
+            LblDatosSimulados.Visibility = esSimulado ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 }
