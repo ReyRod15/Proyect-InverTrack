@@ -728,5 +728,23 @@ namespace InverTrack
             ventana.Owner = this;
             ventana.ShowDialog();
         }
+
+        // [4] Activa el modo oscuro (tema de colores) en la aplicación.
+        private void DarkModeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            DarkModeToggle.Content = "🌙";
+            _modoOscuro = true;
+            ActivarModoOscuro(true);
+            AplicarTemaGrafica();
+        }
+
+        // [4] Vuelve al modo claro original.
+        private void DarkModeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            DarkModeToggle.Content = "☀";
+            _modoOscuro = false;
+            ActivarModoOscuro(false);
+            AplicarTemaGrafica();
+        }
     }
 }
