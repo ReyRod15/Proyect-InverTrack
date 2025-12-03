@@ -846,5 +846,37 @@ namespace InverTrack
                 resources["ChartBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
             }
         }
+
+        // [4] Al cerrar la ventana detenemos timers y guardamos el usuario actual.
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            _temporizadorActualizacion?.Stop();
+            _temporizadorPrecioRapido?.Stop();
+            if (_usuarioActual != null)
+            {
+                _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            }
+        }
+
+        // [4] Cierra sesión del usuario actual y vuelve a la ventana de autenticación.
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("¿Seguro que quieres cerrar sesión?", "Cerrar sesión", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            _temporizadorActualizacion?.Stop();
+            _temporizadorPrecioRapido?.Stop();
+            if (_usuarioActual != null)
+            {
+                _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            }
+
+            var auth = new AuthWindow();
+            auth.Show();
+            Close();
+        }
+
+
     }
 }
