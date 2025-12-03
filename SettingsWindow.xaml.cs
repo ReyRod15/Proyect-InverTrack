@@ -56,6 +56,83 @@ namespace InverTrack
             }
         }
 
+        // [4] Pide un nuevo correo y envía un código para confirmarlo.
+        private async void BtnEnviarCodigoEmail_Click(object sender, RoutedEventArgs e)
+        {
+            LblError.Text = string.Empty;
+
+            var nuevoEmail = TxtNuevoEmail.Text?.Trim();
+            if (string.IsNullOrEmpty(nuevoEmail))
+            {
+                LblError.Text = "Ingresa un correo nuevo";
+                return;
+            }
+
+            if (!UtilidadesValidacion.EsEmailValido(nuevoEmail))
+            {
+                LblError.Text = "Ingresa un correo electrónico válido";
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(_usuario.Email) &&
+                string.Equals(_usuario.Email, nuevoEmail, StringComparison.OrdinalIgnoreCase) &&
+                _usuario.EmailVerificado)
+            {
+                LblError.Text = "Ese correo ya está asignado y verificado.";
+                return;
+            }
+
+            var existente = _servicioAlmacenamiento.ObtenerUsuarioPorEmail(nuevoEmail);
+            if (existente != null && !string.Equals(existente.NombreUsuario, _usuario.NombreUsuario, StringComparison.OrdinalIgnoreCase))
+            {
+                LblError.Text = "Ya existe otro usuario con ese correo.";
+                return;
+            }
+
+            _nuevoEmailPendiente = nuevoEmail;
+            _codigoEmailPendiente = UtilidadesValidacion.GenerarCodigoVerificacion();
+
+            await _servicioEmail.EnviarCodigoAsync(nuevoEmail, "Verificación de correo - InverTrack",
+                $"Tu código de verificación de correo es: {_codigoEmailPendiente}");
+
+            PanelCodigoEmail.Visibility = Visibility.Visible;
+            LblError.Text = "Se envió un código al nuevo correo. Ingrésalo para confirmar el cambio.";
+        }
+
+        // [4] Confirma el código enviado al nuevo correo y actualiza la cuenta.
+        private void BtnConfirmarEmail_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_nuevoEmailPendiente) || string.IsNullOrEmpty(_codigoEmailPendiente))
+            {
+                LblError.Text = "Primero envía un código al nuevo correo.";
+                return;
+            }
+
+            var codigo = TxtCodigoEmail.Text?.Trim();
+            if (string.IsNullOrEmpty(codigo))
+            {
+                LblError.Text = "Ingresa el código de verificación";
+                return;
+            }
+
+            if (!string.Equals(codigo, _codigoEmailPendiente))
+            {
+                LblError.Text = "Código de verificación incorrecto";
+                return;
+            }
+
+            _usuario.Email = _nuevoEmailPendiente;
+            _usuario.EmailVerificado = true;
+            _servicioAlmacenamiento.GuardarUsuario(_usuario);
+
+            _codigoEmailPendiente = null;
+            _nuevoEmailPendiente = null;
+            TxtCodigoEmail.Text = string.Empty;
+
+            MessageBox.Show("Correo actualizado y verificado correctamente.", "Ajustes", MessageBoxButton.OK, MessageBoxImage.Information);
+            CargarDatosIniciales();
+        }
+
 
     }
 }
