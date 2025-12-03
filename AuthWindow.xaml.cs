@@ -49,5 +49,23 @@ namespace InverTrack
             mainWindow.Show();
             Close();
         }
+
+        // [4] Cambia del panel de login al formulario de registro.
+        private void BtnToRegister_Click(object sender, RoutedEventArgs e)
+        {
+            LoginPanel.Visibility = Visibility.Collapsed;
+            RegisterPanel.Visibility = Visibility.Visible;
+            ErrorMessage.Text = string.Empty;
+            ErrorMessage.Visibility = Visibility.Collapsed;
+        }
+
+        // [4] Vuelve del formulario de registro al panel de login.
+        private void BtnToLogin_Click(object sender, RoutedEventArgs e)
+        {
+            LoginPanel.Visibility = Visibility.Visible;
+            RegisterPanel.Visibility = Visibility.Collapsed;
+            ErrorMessage.Text = string.Empty;
+            ErrorMessage.Visibility = Visibility.Collapsed;
+        }
     }
 }
