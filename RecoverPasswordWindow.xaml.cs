@@ -53,4 +53,51 @@ namespace InverTrack
             CodigoPanel.Visibility = Visibility.Visible;
             LblError.Text = "Se envió un código a tu correo. Ingrésalo junto con la nueva contraseña.";
         }
+
+        // [4] Valida el código y aplica la nueva contraseña si todo es correcto.
+        private void BtnConfirmar_Click(object sender, RoutedEventArgs e)
+        {
+            if (_usuarioObjetivo == null || string.IsNullOrEmpty(_codigoEnviado))
+            {
+                LblError.Text = "Primero solicita un código de recuperación.";
+                return;
+            }
+
+            var codigoIngresado = TxtCodigo.Text?.Trim();
+            if (string.IsNullOrEmpty(codigoIngresado))
+            {
+                LblError.Text = "Ingresa el código de verificación";
+                return;
+            }
+
+            if (!string.Equals(codigoIngresado, _codigoEnviado))
+            {
+                LblError.Text = "Código incorrecto";
+                return;
+            }
+
+            var nueva = TxtNuevaContrasena.Password;
+            var confirmar = TxtConfirmarContrasena.Password;
+
+            if (string.IsNullOrEmpty(nueva) || string.IsNullOrEmpty(confirmar))
+            {
+                LblError.Text = "Ingresa y confirma la nueva contraseña";
+                return;
+            }
+
+            if (nueva != confirmar)
+            {
+                LblError.Text = "Las contraseñas no coinciden";
+                return;
+            }
+
+            _usuarioObjetivo.Contrasena = nueva;
+            _servicioAlmacenamiento.GuardarUsuario(_usuarioObjetivo);
+
+            MessageBox.Show("Contraseña actualizada correctamente.", "Recuperación", MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogResult = true;
+            Close();
+        }
+
+    }
 }

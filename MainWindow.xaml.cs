@@ -672,5 +672,29 @@ namespace InverTrack
         }
 
         //Continuacion del codigo de caleb
+        // [4] Cambia el modo de vista (actual/meses/años) y fuerza a recalcular rangos.
+        private void CambiarVista(string tag)
+        {
+            _modoVista = tag;
+            _debeRecalcularRangoX = true;
+
+            // Al cambiar de vista, reseteamos cualquier zoom manual previo para evitar que la gráfica "desaparezca"
+            AsegurarModeloGrafica();
+            _modeloGrafica?.ResetAllAxes();
+
+            AjustarIntervaloPorRango();
+            ActualizarGrafica();
+            ActualizarPrecios();
+        }
+
+        // [4] Mantiene compatibilidad con el ComboBox oculto que también cambia la vista.
+        private void RangoTiempoCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (RangoTiempoCombo.SelectedItem is ComboBoxItem item)
+            {
+                var tag = item.Tag?.ToString() ?? "actual";
+                CambiarVista(tag);
+            }
+        }
     }
 }
