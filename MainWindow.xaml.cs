@@ -234,5 +234,443 @@ namespace InverTrack
             ActualizarGrafica();
             ActualizarPrecios();
         }
+
+
+        // Codigo de diego 
+
+
+        // [3] Actualiza los labels de precio actual y engancha los eventos para recalcular totales.
+        private void ActualizarPrecios()
+        {
+            // Usar intradía si hay datos; si no, caer al histórico
+            List<PrecioHistorico> fuente = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+            if (fuente.Count == 0) return;
+
+            var precioActual = fuente.Last().Precio;
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _ultimoPrecioPorSimbolo[_accionSeleccionada] = precioActual;
+            }
+
+            PrecioCompra.Text = $"${precioActual:F2}";
+            PrecioVenta.Text = $"${precioActual:F2}";
+
+            CantidadCompra.TextChanged -= Cantidad_TextChanged;
+            CantidadVenta.TextChanged -= Cantidad_TextChanged;
+            CantidadCompra.TextChanged += Cantidad_TextChanged;
+            CantidadVenta.TextChanged += Cantidad_TextChanged;
+        }
+
+        // [3] Cada vez que cambia una cantidad, recalculamos los totales de compra/venta.
+        private void Cantidad_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ActualizarTotal();
+        }
+
+        // [3] Calcula el total de la operación de compra y venta usando el precio canónico.
+        private void ActualizarTotal()
+        {
+            // Precio canónico: el mismo que se usa en la gráfica, en Mi Cartera y en las operaciones.
+            decimal precio;
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                precioDict > 0)
+            {
+                precio = precioDict;
+            }
+            else
+            {
+                List<PrecioHistorico> fuente = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+                if (fuente.Count == 0) return;
+                precio = fuente.Last().Precio;
+            }
+
+            if (decimal.TryParse(CantidadCompra.Text, out decimal cantCompra))
+                TotalCompra.Text = $"Total: ${(cantCompra * precio):F2}";
+
+            if (decimal.TryParse(CantidadVenta.Text, out decimal cantVenta))
+                TotalVenta.Text = $"Total: ${(cantVenta * precio):F2}";
+        }
+
+        // ===== [3] Sección: operaciones de compra/venta y cartera =====
+
+        // [3] Ejecuta una compra al precio actual y actualiza usuario, cartera y gráfica.
+        private void BtnComprar_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                MessageBox.Show("Selecciona una acción");
+                return;
+            }
+
+            if (!decimal.TryParse(CantidadCompra.Text, out decimal cantidad) || cantidad <= 0)
+            {
+                MessageBox.Show("Cantidad inválida");
+                return;
+            }
+
+            if (_usuarioActual == null)
+            {
+                MessageBox.Show("Usuario no cargado");
+                return;
+            }
+
+            // Precio canónico: usar el último precio registrado para el símbolo (el mismo que Mi Cartera y la gráfica)
+            decimal precio;
+            if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                precioDict > 0)
+            {
+                precio = precioDict;
+            }
+            else if (!decimal.TryParse(PrecioCompra.Text.Replace("$", string.Empty), NumberStyles.Any, CultureInfo.InvariantCulture, out precio))
+            {
+                // Fallback: usar la última muestra de la serie si por algún motivo no se puede parsear el texto
+                List<PrecioHistorico> fuenteFallback = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+                if (fuenteFallback.Count == 0)
+                {
+                    MessageBox.Show("No se pudo obtener el precio actual.");
+                    return;
+                }
+                precio = fuenteFallback.Last().Precio;
+            }
+            var total = cantidad * precio;
+            var ahora = DateTime.Now;
+
+            // Añadir punto de precio exacto en el modo intradía para que la marca coincida con la línea
+            _preciosIntradia.Add(new PrecioHistorico
+            {
+                Fecha = ahora,
+                Precio = precio,
+                PrecioApertura = precio,
+                PrecioMaximo = precio,
+                PrecioMinimo = precio,
+                Simbolo = _accionSeleccionada
+            });
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
+            }
+
+            if (_usuarioActual.Dinero < total)
+            {
+                MessageBox.Show("Dinero insuficiente");
+                return;
+            }
+
+            _usuarioActual.Dinero -= total;
+            if (!_usuarioActual.Acciones.ContainsKey(_accionSeleccionada))
+                _usuarioActual.Acciones[_accionSeleccionada] = 0;
+            _usuarioActual.Acciones[_accionSeleccionada] += (int)cantidad;
+
+            var transaccion = new Transaccion
+            {
+                Usuario = _usuarioActual.NombreUsuario,
+                Simbolo = _accionSeleccionada,
+                Tipo = "Compra",
+                Cantidad = (int)cantidad,
+                Precio = precio,
+                Total = total,
+                Fecha = ahora
+            };
+
+            _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            _servicioAlmacenamiento.GuardarTransaccion(transaccion);
+
+            ActualizarInfoUsuario();
+            // No recargar histórico desde Yahoo al comprar; solo actualizar con los datos que ya tenemos
+            ActualizarGrafica();
+            ActualizarPrecios();
+            CantidadCompra.Clear();
+
+            MessageBox.Show($"Compra realizada: {cantidad} x {_accionSeleccionada} @ ${precio:F2}");
+        }
+
+        // [3] Ejecuta una venta al precio actual y actualiza usuario, cartera y gráfica.
+        private void BtnVender_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                MessageBox.Show("Selecciona una acción");
+                return;
+            }
+
+            if (!decimal.TryParse(CantidadVenta.Text, out decimal cantidad) || cantidad <= 0)
+            {
+                MessageBox.Show("Cantidad inválida");
+                return;
+            }
+
+            if (_usuarioActual == null)
+            {
+                MessageBox.Show("Usuario no cargado");
+                return;
+            }
+
+            if (!_usuarioActual.Acciones.ContainsKey(_accionSeleccionada) || _usuarioActual.Acciones[_accionSeleccionada] < cantidad)
+            {
+                MessageBox.Show("No tienes suficientes acciones");
+                return;
+            }
+
+            // Precio canónico: usar el último precio registrado para el símbolo (el mismo que Mi Cartera y la gráfica)
+            decimal precio;
+            if (!string.IsNullOrEmpty(_accionSeleccionada) &&
+                _ultimoPrecioPorSimbolo.TryGetValue(_accionSeleccionada, out var precioDict) &&
+                precioDict > 0)
+            {
+                precio = precioDict;
+            }
+            else if (!decimal.TryParse(PrecioVenta.Text.Replace("$", string.Empty), NumberStyles.Any, CultureInfo.InvariantCulture, out precio))
+            {
+                // Fallback: usar la última muestra de la serie si por algún motivo no se puede parsear el texto
+                List<PrecioHistorico> fuenteFallback = _preciosIntradia.Any() ? _preciosIntradia : _preciosHistoricos;
+                if (fuenteFallback.Count == 0)
+                {
+                    MessageBox.Show("No se pudo obtener el precio actual.");
+                    return;
+                }
+                precio = fuenteFallback.Last().Precio;
+            }
+            var total = cantidad * precio;
+            var ahora = DateTime.Now;
+
+            // Añadir punto de precio exacto en el modo intradía para que la marca coincida con la línea
+            _preciosIntradia.Add(new PrecioHistorico
+            {
+                Fecha = ahora,
+                Precio = precio,
+                PrecioApertura = precio,
+                PrecioMaximo = precio,
+                PrecioMinimo = precio,
+                Simbolo = _accionSeleccionada
+            });
+
+            if (!string.IsNullOrEmpty(_accionSeleccionada))
+            {
+                _cacheIntradia[_accionSeleccionada] = _preciosIntradia.ToList();
+            }
+
+            _usuarioActual.Dinero += total;
+            _usuarioActual.Acciones[_accionSeleccionada] -= (int)cantidad;
+
+            if (_usuarioActual.Acciones[_accionSeleccionada] == 0)
+                _usuarioActual.Acciones.Remove(_accionSeleccionada);
+
+            var transaccion = new Transaccion
+            {
+                Usuario = _usuarioActual.NombreUsuario,
+                Simbolo = _accionSeleccionada,
+                Tipo = "Venta",
+                Cantidad = (int)cantidad,
+                Precio = precio,
+                Total = total,
+                Fecha = ahora
+            };
+
+            _servicioAlmacenamiento.GuardarUsuario(_usuarioActual);
+            _servicioAlmacenamiento.GuardarTransaccion(transaccion);
+
+            ActualizarInfoUsuario();
+            // No recargar histórico desde Yahoo al vender; solo actualizar con los datos que ya tenemos
+            ActualizarGrafica();
+            ActualizarPrecios();
+            CantidadVenta.Clear();
+
+            MessageBox.Show($"Venta realizada: {cantidad} x {_accionSeleccionada} @ ${precio:F2}");
+        }
+
+        // [3] Recalcula dinero disponible, valor de cartera y la lista "Mi Cartera".
+        private void ActualizarInfoUsuario()
+        {
+            if (_usuarioActual == null)
+                return;
+
+            LblDinero.Text = $"${_usuarioActual.Dinero:F2}";
+
+            Task.Run(async () =>
+            {
+                var transacciones = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuarioActual.NombreUsuario);
+                var items = new List<CarteraItem>();
+                decimal valorCartera = 0;
+
+                foreach (var kvp in _usuarioActual.Acciones)
+                {
+                    var simbolo = kvp.Key;
+                    var cantidad = kvp.Value;
+
+                    // Usar SIEMPRE el precio canónico almacenado en _ultimoPrecioPorSimbolo.
+                    // Si no existe para ese símbolo aún, obtenerlo UNA vez del servicio y guardarlo.
+                    decimal precioActual;
+                    if (!_ultimoPrecioPorSimbolo.TryGetValue(simbolo, out precioActual) || precioActual <= 0)
+                    {
+                        precioActual = await _servicioMercado.ObtenerPrecioActual(simbolo);
+                        _ultimoPrecioPorSimbolo[simbolo] = precioActual;
+                    }
+
+                    var valorActual = precioActual * cantidad;
+                    valorCartera += valorActual;
+
+                    var transaccionesSimbolo = transacciones
+                        .Where(t => t.Simbolo == simbolo)
+                        .OrderBy(t => t.Fecha)
+                        .ToList();
+
+                    // Calcular costo promedio de la posición ABIERTA usando FIFO (solo compras no vendidas)
+                    var lotes = new List<(int Cantidad, decimal Precio)>();
+
+                    foreach (var t in transaccionesSimbolo)
+                    {
+                        if (t.Tipo == "Compra")
+                        {
+                            lotes.Add((t.Cantidad, t.Precio));
+                        }
+                        else if (t.Tipo == "Venta")
+                        {
+                            int porVender = t.Cantidad;
+                            while (porVender > 0 && lotes.Count > 0)
+                            {
+                                var lote = lotes[0];
+                                if (porVender >= lote.Cantidad)
+                                {
+                                    porVender -= lote.Cantidad;
+                                    lotes.RemoveAt(0);
+                                }
+                                else
+                                {
+                                    lote.Cantidad -= porVender;
+                                    lotes[0] = lote;
+                                    porVender = 0;
+                                }
+                            }
+                        }
+                    }
+
+                    int cantidadAbierta = lotes.Sum(l => l.Cantidad);
+                    decimal costoAbierto = lotes.Sum(l => l.Cantidad * l.Precio);
+                    decimal promedioCompra = cantidadAbierta > 0 ? costoAbierto / cantidadAbierta : 0m;
+
+                    // Fallback por si algo no cuadra con la cantidad almacenada en el usuario
+                    if (cantidadAbierta == 0 && cantidad > 0)
+                    {
+                        var compras = transaccionesSimbolo.Where(t => t.Tipo == "Compra").ToList();
+                        var accionesCompradas = compras.Sum(t => t.Cantidad);
+                        var costoTotalCompras = compras.Sum(t => t.Total);
+                        promedioCompra = accionesCompradas > 0 ? costoTotalCompras / accionesCompradas : 0m;
+                    }
+
+                    var valorBase = promedioCompra * cantidad;
+                    var ganancia = valorActual - valorBase;
+
+                    items.Add(new CarteraItem
+                    {
+                        Simbolo = simbolo,
+                        Cantidad = cantidad,
+                        ValorActual = valorActual,
+                        Ganancia = ganancia
+                    });
+                }
+
+                Dispatcher.Invoke(() =>
+                {
+                    LblCartera.Text = $"${valorCartera:F2}";
+                    CarteraList.ItemsSource = items;
+                });
+            });
+        }
+
+        // [3] Obtiene el precio promedio de la posición ABIERTA (FIFO) para un símbolo.
+        private decimal CalcularPromedioCompraAbierto(string simbolo)
+        {
+            if (_usuarioActual == null)
+                return 0m;
+
+            var transaccionesSimbolo = _servicioAlmacenamiento.ObtenerTransaccionesUsuario(_usuarioActual.NombreUsuario)
+                .Where(t => t.Simbolo == simbolo)
+                .OrderBy(t => t.Fecha)
+                .ToList();
+
+            var lotes = new List<(int Cantidad, decimal Precio)>();
+
+            foreach (var t in transaccionesSimbolo)
+            {
+                if (t.Tipo == "Compra")
+                {
+                    lotes.Add((t.Cantidad, t.Precio));
+                }
+                else if (t.Tipo == "Venta")
+                {
+                    int porVender = t.Cantidad;
+                    while (porVender > 0 && lotes.Count > 0)
+                    {
+                        var lote = lotes[0];
+                        if (porVender >= lote.Cantidad)
+                        {
+                            porVender -= lote.Cantidad;
+                            lotes.RemoveAt(0);
+                        }
+                        else
+                        {
+                            lote.Cantidad -= porVender;
+                            lotes[0] = lote;
+                            porVender = 0;
+                        }
+                    }
+                }
+            }
+
+            int cantidadAbierta = lotes.Sum(l => l.Cantidad);
+            if (cantidadAbierta <= 0)
+                return 0m;
+
+            decimal costoAbierto = lotes.Sum(l => l.Cantidad * l.Precio);
+            return costoAbierto > 0 ? costoAbierto / cantidadAbierta : 0m;
+        }
+
+        //Continuacion de codigo de diego
+        //Inicio del codigo de caleb 
+
+        // [3] Incrementa en +1 la cantidad de compra.
+        private void BtnMasCompra_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadCompra, 1);
+        }
+
+        // [3] Decrementa en -1 la cantidad de compra (sin bajar de cero).
+        private void BtnMenosCompra_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadCompra, -1);
+        }
+
+        // [3] Incrementa en +1 la cantidad de venta.
+        private void BtnMasVenta_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadVenta, 1);
+        }
+
+        // [3] Decrementa en -1 la cantidad de venta (sin bajar de cero).
+        private void BtnMenosVenta_Click(object sender, RoutedEventArgs e)
+        {
+            IncrementarCantidad(CantidadVenta, -1);
+        }
+
+        // [3] Rutina pequeña para sumar/restar cantidades en los TextBox numéricos.
+        private void IncrementarCantidad(TextBox textBox, int delta)
+        {
+            if (!int.TryParse(textBox.Text, out var valor))
+            {
+                valor = 0;
+            }
+
+            valor += delta;
+            if (valor < 0) valor = 0;
+
+            textBox.Text = valor.ToString();
+        }
+
+        //Continuacion del codigo de caleb
     }
 }
