@@ -746,5 +746,12 @@ namespace InverTrack
             ActivarModoOscuro(false);
             AplicarTemaGrafica();
         }
+
+        // [4] Fuerza una actualización inmediata de precios y gráfica sin esperar al timer.
+        private void BtnIrActual_Click(object sender, RoutedEventArgs e)
+        {
+            // Forzar una actualización manual sin cambiar la vista ni el zoom actual
+            TimerActualizacion_Tick(null, EventArgs.Empty);
+        }
     }
 }
