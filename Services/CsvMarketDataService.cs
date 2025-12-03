@@ -11,7 +11,7 @@ namespace InverTrack.Services
     /// No depende de conexion a Internet ni de Yahoo Finance. Si algunon di­a conectan una API real,
     /// este es el punto central a cambiar.
     /// </summary>
-    // [2] Servicio central para simular datos de mercado e histÃ³ricos.
+    // [2] Servicio central para simular datos de mercado e historicos.
     public class CsvMarketDataService
     {
         private readonly Dictionary<string, List<PrecioHistorico>> _cacheHistorico = new();
